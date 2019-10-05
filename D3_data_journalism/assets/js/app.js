@@ -2,6 +2,7 @@
 var svgWidth = 960;
 var svgHeight = 500;
 
+// Defining margin borders
 var margin = {
   top: 20,
   right: 40,
@@ -9,30 +10,32 @@ var margin = {
   left: 100
 };
 
+// Calculating chart height and width
 var width = svgWidth - margin.left - margin.right;
 var height = svgHeight - margin.top - margin.bottom;
 
-// Create an SVG wrapper, append an SVG group that will hold our chart,
-// and shift the latter by left and top margins.
-var svg = d3
-  .select(".chart")
-  .append("svg")
+// Appending visual to the 'scatter' HTML element
+var chart = d3.select("#scatter").append("div").classed("chart", true);
+
+// Create an SVG wrapper and append SVG group that will hold our chart,
+var svg = chart.append("svg")
   .attr("width", svgWidth)
   .attr("height", svgHeight);
 
 // Append an SVG group
-var chartGroup = svg.append("scatter")
+var chartGroup = svg.append("g")
   .attr("transform", `translate(${margin.left}, ${margin.top})`);
 
 // Initial Params
-var chosenXAxis = "hair_length";
+var chosenXAxis = "poverty";
+var chosenYAxis = "healthcare";
 
-// function used for updating x-scale var upon click on axis label
-function xScale(hairData, chosenXAxis) {
-  // create scales
+// Function used for updating x-scale var upon click on axis label
+function xScale(data, chosenXAxis) {
+  // Create scales
   var xLinearScale = d3.scaleLinear()
-    .domain([d3.min(hairData, d => d[chosenXAxis]) * 0.8,
-      d3.max(hairData, d => d[chosenXAxis]) * 1.2
+    .domain([d3.min(data, d => d[chosenXAxis]) * 0.8,
+      d3.max(data, d => d[chosenXAxis]) * 1.2
     ])
     .range([0, width]);
 
@@ -40,7 +43,19 @@ function xScale(hairData, chosenXAxis) {
 
 }
 
-// function used for updating xAxis var upon click on axis label
+function yScale(data, chosenYAxis) {
+  // Create scales
+  var yLinearScale = d3.scaleLinear()
+    .domain([d3.min(data, d => d[chosenYAxis]) * 0.8,
+      d3.max(data, d => d[chosenYAxis]) * 1.2
+    ])
+    .range([height, 0]);
+
+  return yLinearScale;
+
+}
+
+// Function used for updating xAxis var upon click on axis label
 function renderAxes(newXScale, xAxis) {
   var bottomAxis = d3.axisBottom(newXScale);
 
@@ -51,36 +66,58 @@ function renderAxes(newXScale, xAxis) {
   return xAxis;
 }
 
-// function used for updating circles group with a transition to
-// new circles
+// Function used for updating yAxis var upon click on axis label
+function renderAxes(newYScale, yAxis) {
+  var leftAxis = d3.axisLeft(newYScale);
+
+  yAxis.transition()
+    .duration(1000)
+    .call(leftAxis);
+
+  return yAxis;
+}
+
+// Function used for updating circles group with a transition to new circles
 function renderCircles(circlesGroup, newXScale, chosenXaxis) {
 
   circlesGroup.transition()
     .duration(1000)
-    .attr("cx", d => newXScale(d[chosenXAxis]));
+    .attr("cx", dataset => newXScale(dataset[chosenXAxis]))
+    .attr("cy", dataset => newYScale(dataset[chosenYAxis]));
 
   return circlesGroup;
 }
 
-// function used for updating circles group with new tooltip
+// Function used for updating state labels with a transition to new circles
+function renderText(textGroup, newXScale, chosenXAxis, newYScale, chosenYAxis) {
+
+  textGroup.transition()
+    .duration(1000)
+    .attr("x", dataset => newXScale(dataset[chosenXAxis]))
+    .attr("y", dataset => newYScale(dataset[chosenYAxis]));
+}
+
+// Function used for updating circles group with new tooltip
 function updateToolTip(chosenXAxis, circlesGroup) {
 
-  if (chosenXAxis === "poverty") {
-    var label = "In Poverty %";
+  if (chosenXAxis === 'poverty') {
+    var label = "Poverty: ";
   }
-  else {
-    var label = "# of Albums:";
+  else (chosenXAxis === 'income'){
+    var label = "Income: ";
   }
 
+// Tooltip
   var toolTip = d3.tip()
     .attr("class", "tooltip")
     .offset([80, -60])
     .html(function(d) {
-      return (`${d.state}<br>${abbr} ${d[chosenXAxis]}`);
+      return (`${d.state}<br>${label} ${d[chosenXAxis], chosenXAxis}<br>${yLabel} ${d[chosenYAxis]}`);
     });
 
   circlesGroup.call(toolTip);
 
+// Event mouseover
   circlesGroup.on("mouseover", function(data) {
     toolTip.show(data);
   })
@@ -94,45 +131,53 @@ function updateToolTip(chosenXAxis, circlesGroup) {
 
 
 // Retrieve data from the CSV file and execute everything below
-d3.csv("data.csv").then(function(dataset, err) {
+d3.csv("./assets/datadata.csv").then(function(dataset, err) {
   if (err) throw err;
 
-  // parse data
+  // Print data to console
+  console.log(dataset);
+
+  // Parse data
   dataset.forEach(function(data) {
     data.poverty = +data.poverty;
     data.age = +data.age;
     data.income = +data.income;
+    data.healthcare = +data.healthcare;
+    data.obesity = +data.obesity;
+    data.smokes = +data.smokes;
   });
 
-  // xLinearScale function above csv import
+  // xLinearScale and yLinearScale function above csv import
   var xLinearScale = xScale(dataset, chosenXAxis);
+//  var yLinearScale = yScale(dataset, chosenYAxis)
 
   // Create y scale function
-  var yLinearScale = d3.scaleLinear()
-    .domain([0, d3.max(dataset, d => d.healthcare)])
-    .range([height, 0]);
+//  var yLinearScale = d3.scaleLinear()
+//    .domain([0, d3.max(dataset, d => d.healthcare)])
+//    .range([height, 0]);
 
   // Create initial axis functions
   var bottomAxis = d3.axisBottom(xLinearScale);
   var leftAxis = d3.axisLeft(yLinearScale);
 
-  // append x axis
+  // Append x axis
   var xAxis = chartGroup.append("g")
     .classed("x-axis", true)
     .attr("transform", `translate(0, ${height})`)
     .call(bottomAxis);
 
-  // append y axis
-  chartGroup.append("g")
+  // Append y axis
+  var yAxis = chartGroup.append("g")
+    .classed("y-axis", true)
     .call(leftAxis);
 
-  // append initial circles
+  // Append initial circles
   var circlesGroup = chartGroup.selectAll("circle")
     .data(dataset)
     .enter()
     .append("circle")
     .attr("cx", d => xLinearScale(d[chosenXAxis]))
-    .attr("cy", d => yLinearScale(d.state))
+    .attr("cy", d => yLinearScale(d[chosenYAxis]))
     .attr("r", 10)
     .attr("fill", "blue")
     .attr("opacity", ".5");
