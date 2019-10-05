@@ -14,17 +14,20 @@ var margin = {
 var width = svgWidth - margin.left - margin.right;
 var height = svgHeight - margin.top - margin.bottom;
 
-// Appending visual to the 'scatter' HTML element
-var chart = d3.select("#scatter").append("div").classed("chart", true);
-
 // Create an SVG wrapper and append SVG group that will hold our chart,
-var svg = chart.append("svg")
+var svg = d3.select("body")
+  .append("svg")
   .attr("width", svgWidth)
   .attr("height", svgHeight);
+
+// Appending visual to the 'scatter' HTML element
+var chart = d3.select("#scatter").append("div").classed("chart", true);
 
 // Append an SVG group
 var chartGroup = svg.append("g")
   .attr("transform", `translate(${margin.left}, ${margin.top})`);
+
+// d3.select("body").append("div").attr("class", "toolTip");
 
 // Initial Params
 var chosenXAxis = "poverty";
@@ -97,8 +100,22 @@ function renderText(textGroup, newXScale, chosenXAxis, newYScale, chosenYAxis) {
     .attr("y", dataset => newYScale(dataset[chosenYAxis]));
 }
 
+// Function to style toolTip
+function styleToolTip(value, chosenXAxis) {
+
+  // Style variable selected
+  // Poverty value
+  if (chosenXAxis === 'poverty') {
+    return `${value}`;
+  }
+  // Income value
+  else if (chosenXAxis === 'income') {
+    return `${value}`;
+  }
+}
+
 // Function used for updating circles group with new tooltip
-function updateToolTip(chosenXAxis, circlesGroup) {
+function updateToolTip(chosenXAxis, chosenYAxis, circlesGroup) {
 
   if (chosenXAxis === 'poverty') {
     var label = "Poverty: ";
